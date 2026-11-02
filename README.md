@@ -1,14 +1,30 @@
 # Pocket Option AI Analyzer
 
-A read-only market analysis starter project intended for deployment on Render.
+A read-only market analysis API intended for Render deployment.
 
-## Current features
+## Current endpoints
 
-- FastAPI service
-- Health endpoint at `/health`
-- Status endpoint at `/api/status`
-- API documentation at `/docs`
-- Explicit read-only posture; no order placement or trade execution
+- `GET /` — service information
+- `GET /health` — health check
+- `GET /api/status` — collector status
+- `POST /api/candles/ingest` — accept one normalized OHLC candle from a trusted adapter
+- `GET /api/candles?symbol=EURUSD_otc&timeframe=60&limit=100` — read stored candles
+- `GET /docs` — interactive API docs
+
+## Important: data-source status
+
+The repository does **not** yet contain a verified Pocket Option WebSocket/API adapter. The ingest endpoint is only a secured receiver for normalized candle data; it does not fetch data from Pocket Option by itself. We must inspect and validate the actual authorized read-only data feed and its message format before implementing that adapter. Do not guess broker endpoints or copy session cookies into source code.
+
+## Render setup
+
+Add this Environment Variable in Render:
+
+- Key: `CANDLE_INGEST_KEY`
+- Value: a long random secret generated privately by you
+
+The key is required to call the ingest endpoint. Do not commit it to GitHub or send it in chat.
+
+The current candle buffer is in memory and resets when the free service restarts or sleeps. It is suitable for initial integration tests, not permanent history. A persistent database can be added later.
 
 ## Local setup (Windows)
 
@@ -19,29 +35,9 @@ python -m pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Open:
+## Safety
 
-- http://127.0.0.1:8000/
-- http://127.0.0.1:8000/health
-- http://127.0.0.1:8000/docs
-
-## Deploy to Render
-
-1. In Render, choose **New +** → **Blueprint** or **Web Service**.
-2. Connect this GitHub repository.
-3. For a Blueprint deployment, Render reads `render.yaml`.
-4. For a manual Web Service, use:
-   - Runtime: Python
-   - Build command: `pip install -r requirements.txt`
-   - Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - Health check path: `/health`
-
-The free web service may sleep when idle; it is not suitable for guaranteed uninterrupted real-time WebSocket processing.
-
-## Security and market-data notes
-
-- Do not commit broker SSIDs, cookies, authorization headers, or Telegram tokens.
-- Store any required secrets only in Render Environment Variables.
-- This starter does not connect to Pocket Option yet. A supported, authorized, read-only market-data source must be verified before adding an adapter.
-- Signal analysis is probabilistic and does not guarantee outcomes.
-- No automatic trading is implemented.
+- Read-only analysis only; no order placement.
+- Never commit broker SSIDs, cookies, authorization headers, or Telegram tokens.
+- Signals are estimates and cannot guarantee trading outcomes.
+- Render Free services can sleep when idle and cannot guarantee uninterrupted real-time collection.
